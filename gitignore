@@ -1,0 +1,29 @@
+
+# PlatformIO
+.pio/
+.vscode/
+
+# ESP-IDF build
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+
+# Frontend dependencies
+node_modules/
+frontend/node_modules/
+
+# Frontend build output (jika tidak digunakan sebagai sumber filesystem)
+frontend/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
