@@ -1,5 +1,5 @@
-
 #include "webserver.h"
+#include "websocket.h"
 
 #include <string.h>
 
@@ -189,7 +189,6 @@ static esp_err_t assets_handler(httpd_req_t *req)
 // --------------------------------------------------
 // REGISTER ROUTES
 // --------------------------------------------------
-
 static esp_err_t register_routes(void)
 {
     const httpd_uri_t routes[] = {
@@ -197,17 +196,21 @@ static esp_err_t register_routes(void)
             .uri = "/",
             .method = HTTP_GET,
             .handler = dashboard_handler,
-            .user_ctx = nullptr
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
         },
         {
             .uri = "/assets/*",
             .method = HTTP_GET,
             .handler = assets_handler,
-            .user_ctx = nullptr
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
         }
     };
-
-    
 
     for (const auto &route : routes) {
         esp_err_t err = httpd_register_uri_handler(
@@ -223,7 +226,6 @@ static esp_err_t register_routes(void)
 
     return ESP_OK;
 }
-
 
 // --------------------------------------------------
 // START / STOP SERVER
@@ -263,6 +265,14 @@ esp_err_t webserver_start(void)
         server = nullptr;
         return err;
     }
+
+    err = websocket_register(server);
+    if (err != ESP_OK) {
+        httpd_stop(server);
+        server = nullptr;
+        return err;
+    }
+
 
     ESP_LOGI(TAG, "HTTP server started on port 80");
 

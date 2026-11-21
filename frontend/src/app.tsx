@@ -1,31 +1,38 @@
+import { useEffect, useState } from "preact/hooks";
+import useWebsocket from "./hooks/useWebsocket";
+import type { StatusPayload } from "./models/WebSocketPayload";
+import RamMonitor from "./components/ramMonitor";
+
 export function App() {
+  const { status, onMessage } = useWebsocket();
+  const [statusPayload, setStatusPayload] = useState<StatusPayload | null>(
+    null,
+  );
+
+  useEffect(() => {
+    onMessage((data) => {
+      if (data.action === "status_update") {
+        const payload = data.payload as StatusPayload;
+        setStatusPayload(payload);
+      }
+    });
+  }, [onMessage]);
+
   // Dummy device data
   const device = {
     name: "ESP32-S3",
-    status: "Online",
+    status,
     ip: "192.168.4.1",
-    ram: {
-      used: 128,
-      total: 512,
-    },
     sdcard: {
       detected: true,
       used: 2.4,
       total: 16,
     },
-    hotspot: {
-      connected: 3,
-      devices: [
-        { name: "iPhone", ip: "192.168.4.2" },
-        { name: "Laptop", ip: "192.168.4.3" },
-        { name: "Android", ip: "192.168.4.4" },
-      ],
-    },
   };
 
-  const ramPercent = (device.ram.used / device.ram.total) * 100;
-  const sdPercent = (device.sdcard.used / device.sdcard.total) * 100;
-
+  const sdPercent = device.sdcard.detected
+    ? (device.sdcard.used / device.sdcard.total) * 100
+    : 0;
   return (
     <main class="min-h-screen bg-slate-950 text-slate-100">
       {/* Navbar */}
@@ -41,10 +48,7 @@ export function App() {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-400" />
-            <span class="text-sm text-slate-400">Online</span>
-          </div>
+          <StatusIndicator status={status} />
         </div>
       </nav>
 
@@ -84,29 +88,7 @@ export function App() {
 
           <div class="grid gap-4 md:grid-cols-2">
             {/* RAM */}
-            <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-slate-400">RAM Usage</p>
-                  <h4 class="mt-2 text-3xl font-bold">
-                    {ramPercent.toFixed(1)}%
-                  </h4>
-                </div>
-                <span class="rounded-xl bg-cyan-500/10 p-3 text-2xl">◈</span>
-              </div>
-
-              <div class="mt-6 h-2 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  class="h-full rounded-full bg-cyan-400"
-                  style={{ width: `${ramPercent}%` }}
-                />
-              </div>
-
-              <div class="mt-3 flex justify-between text-xs text-slate-400">
-                <span>{device.ram.used} KB Used</span>
-                <span>{device.ram.total} KB Total</span>
-              </div>
-            </div>
+            <RamMonitor ram={statusPayload?.ram} />
 
             {/* SD Card */}
             <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
@@ -140,43 +122,6 @@ export function App() {
                 <p class="mt-5 text-sm text-red-400">No SD card available.</p>
               )}
             </div>
-          </div>
-        </section>
-
-        {/* Hotspot devices */}
-        <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 class="text-xl font-bold">Connected Devices</h3>
-              <p class="mt-1 text-sm text-slate-400">
-                Devices connected to ESP32 hotspot.
-              </p>
-            </div>
-
-            <span class="rounded-full bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
-              {device.hotspot.connected} Connected
-            </span>
-          </div>
-
-          <div class="mt-6 divide-y divide-slate-800">
-            {device.hotspot.devices.map((item) => (
-              <div
-                key={item.ip}
-                class="flex items-center justify-between gap-4 py-4"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800">
-                    <span>▣</span>
-                  </div>
-                  <div>
-                    <p class="font-medium">{item.name}</p>
-                    <p class="text-xs text-slate-500">{item.ip}</p>
-                  </div>
-                </div>
-
-                <span class="h-2 w-2 rounded-full bg-emerald-400" />
-              </div>
-            ))}
           </div>
         </section>
 
@@ -229,5 +174,29 @@ export function App() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function StatusIndicator({ status }: { status: string }) {
+  return (
+    <div class="flex items-center gap-2">
+      <span
+        class={`h-2 w-2 rounded-full ${
+          status === "connected"
+            ? "bg-emerald-400"
+            : status === "connecting"
+              ? "bg-yellow-400"
+              : "bg-red-400"
+        }`}
+      />
+
+      <span class="text-sm text-slate-400">
+        {status === "connected"
+          ? "Online"
+          : status === "connecting"
+            ? "Connecting..."
+            : "Offline"}
+      </span>
+    </div>
   );
 }

@@ -9,7 +9,7 @@ export default defineConfig({
   base: "/",
 
   build: {
-    outDir: "../data",
+    outDir: "./dist",
     emptyOutDir: true,
 
     rollupOptions: {
